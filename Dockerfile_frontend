@@ -1,0 +1,14 @@
+# Frontend Dockerfile
+FROM debian:latest
+
+# Install Apache and PHP
+RUN apt-get update && apt-get install -y apache2 php libapache2-mod-php wget
+
+# Copy frontend files to Apache document root
+COPY frontend/index.html /var/www/html/index.html
+COPY frontend/script.js /var/www/html/script.js
+
+EXPOSE 80
+
+# Start Apache
+CMD ["apache2ctl", "-D", "FOREGROUND"]

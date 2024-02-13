@@ -1,10 +1,22 @@
 version: '3'
+
 services:
-  backend:
-    build: ./docker/backend
-    ports:
-      - "5000:5000"
   frontend:
-    build: ./docker/frontend
+    build:
+      context: .
+      dockerfile: Dockerfile_frontend
     ports:
-      - "80:80"
+      - "8080:80"
+    volumes:
+      - ./frontend:/var/www/html
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile_backend
+    ports:
+      - "8081:80"
+    volumes:
+      - ./backend:/var/www/html
+    restart: always
