@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+    web:
+        container_name: "${COMPOSE_PROJECT_NAME}-web"
+        image: ${WEB_IMAGE}
+        ports:
+            - "80:80"
+        volumes:
+            - ${DOCUMENT_ROOT}:${APACHE_DOCUMENT_ROOT}
+        links:
+            - db:db
+
+    db:
+        container_name: "${COMPOSE_PROJECT_NAME}-db"
+        image: ${MYSQL_IMAGE}
+        volumes:
+            - ${MYSQL_DATA_DIR}:/var/lib/mysql
+        ports:
+            - "${HOST_MACHINE_MYSQL_PORT}:3306"
+        environment:
+            - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+
+    myadmin:
+        container_name: "${COMPOSE_PROJECT_NAME}-myadmin"
+        image: ${MYADMIN_IMAGE}
+        ports:
+            - "${HOST_MACHINE_PMA}:80"
+        links:
+            - db:db

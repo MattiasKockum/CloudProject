@@ -1,0 +1,106 @@
+heat_template_version: wallaby
+
+description: >
+  HOT template for deploying LAMP stack on OpenStack
+
+parameters:
+  ImageName:
+    type: string
+    description: Name of the image to use for VMs
+  SecurityGroupWeb:
+    type: string
+    description: Name of the security group for web access
+  SecurityGroupDB:
+    type: string
+    description: Name of the security group for database access
+  KeyPairName:
+    type: string
+    description: Name of the RSA keypair to use for SSH access
+
+resources:
+  Volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: 2
+
+  Network:
+    type: OS::Neutron::Net
+    properties:
+      name: network_info3_rjean
+
+  Subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: Network }
+      cidr: 192.168.100.0/24
+      gateway_ip: 192.168.100.1
+      allocation_pools:
+        - start: 192.168.100.2
+          end: 192.168.100.254
+
+  Router:
+    type: OS::Neutron::Router
+
+  RouterInterface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: Router }
+      subnet: { get_resource: Subnet }
+
+  Port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: Network }
+
+  VM1:
+    type: OS::Nova::Server
+    properties:
+      name: VM1
+      image: { get_param: ImageName }
+      flavor: m1.mini
+      key_name: { get_param: KeyPairName }
+      networks:
+        - port: { get_resource: Port }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            "#cloud-config\npackages:\n  - mysql-server"
+          params:
+            "{{ DB_USER }}": "admin"
+            "{{ DB_PASSWORD }}": "password"
+            "{{ FLOATING_IP }}": { get_attr: [FloatingIP, floating_ip_address] }
+
+  VM2:
+    type: OS::Nova::Server
+    properties:
+      name: VM2
+      image: { get_param: ImageName }
+      flavor: m1.mini
+      key_name: { get_param: KeyPairName }
+      networks:
+        - port: { get_resource: Port }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            "#cloud-config\npackages:\n  - mysql-server"
+          params:
+            "{{ DB_USER }}": "admin"
+            "{{ DB_PASSWORD }}": "password"
+            "{{ FLOATING_IP }}": { get_attr: [FloatingIP, floating_ip_address] }
+  FloatingIP:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: External-ENSSAT
+
+  FloatingIPAssociation:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: FloatingIP }
+      port_id: { get_resource: Port }
+
+outputs:
+  NetworkID:
+    description: ID of the created network
+    value: { get_resource: Network }
