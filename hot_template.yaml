@@ -1,4 +1,4 @@
-heat_template_version: '2018-08-31'
+heat_template_version: '2016-04-08'
 
 parameters:
   image_name:
@@ -41,12 +41,16 @@ resources:
     properties:
       network: { get_resource: network }
       security_groups: [ { get_resource: frontend_security_group } ]
+      fixed_ips:
+        - ip_address: 192.168.100.146
 
   backend_port:
     type: OS::Neutron::Port
     properties:
       network: { get_resource: network }
       security_groups: [ { get_resource: backend_security_group } ]
+      fixed_ips:
+        - ip_address: 192.168.100.51
 
   router:
     type: OS::Neutron::Router
@@ -98,8 +102,6 @@ resources:
       key_name: { get_param: key_name }
       networks:
         - port: { get_resource: frontend_port }
-      fixed_ips:
-        - ip_address: 192.168.100.146
       user_data_format: RAW
       user_data:
         str_replace:
@@ -128,8 +130,6 @@ resources:
       key_name: { get_param: key_name }
       networks:
         - port: { get_resource: backend_port }
-      fixed_ips:
-        - ip_address: 192.168.100.51
       user_data_format: RAW
       user_data:
         str_replace:
