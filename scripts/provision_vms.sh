@@ -4,7 +4,7 @@
 STACK_NAME="project-stack"
 
 # Launch the Heat stack
-openstack stack create --template templates/hot_template.yaml --environment environments/environment.yaml $STACK_NAME
+openstack stack create --template hot_template.yaml --environment environment.yaml $STACK_NAME
 
 # Wait for stack creation to complete
 echo "Waiting for stack creation to complete..."
@@ -31,13 +31,3 @@ echo "Stack creation completed successfully."
 FLOATING_IP=$(openstack floating ip list --format json | jq -r '.[0]."Floating IP Address"')
 
 echo "VM1 web interface can be accessed at: http://$FLOATING_IP"
-
-
-# Associate floating IP with VM1
-#VM1_INSTANCE_ID=$(openstack server list --name VM1 --format json | jq -r '.[0].ID')
-#openstack server add floating ip $VM1_INSTANCE_ID $FLOATING_IP
-
-#echo "Floating IP associated with VM1."
-
-# Print information
-#echo "VM1 web interface can be accessed at: http://$FLOATING_IP"
