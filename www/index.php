@@ -31,7 +31,8 @@
         <h1>Welcome to Our Website</h1>
         <p>This is a simple landing page created with PHP.</p>
         <p>Development is still going on</p> 
-        <p>Please see <a href="http://localhost:8080">admin panel</a> user=root, password=root</p>
+        <p>Please see <a href="http://<?php echo $_SERVER['SERVER_ADDR']; ?>:8080">admin panel</a> user=root, password=root</p>
+        <button onclick="window.location.href='test_db.php';">Go to Test Database Page</button>
     </div>
 </body>
 </html>
