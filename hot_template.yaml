@@ -13,7 +13,7 @@ resources:
     type: OS::Cinder::Volume
     properties:
       name: volume_backend
-      size: 2
+      size: 8
 
   volume_frontend:
     type: OS::Cinder::Volume
@@ -109,7 +109,7 @@ resources:
             sudo mv /var/lib/docker /mnt/volume/docker
             sudo ln -s /mnt/volume/docker /var/lib/docker
             systemctl start docker
-            cd /mnt/volume/CloudProject/frontend_volume && docker-compose up -d
+            cd /mnt/volume/CloudProject && docker-compose up -d web myadmin
           params:
             user: "debian"
             password: "password"
@@ -128,6 +128,16 @@ resources:
           template: |
             #!/bin/bash
             echo "user:password" | chpasswd
+            mkdir /mnt/volume
+            sudo mkfs.ext4 /dev/vdb
+            sudo mount /dev/vdb /mnt/volume
+            chmod o+w /mnt/volume
+            git clone https://github.com/MattiasKockum/CloudProject /mnt/volume/CloudProject
+            systemctl stop docker
+            sudo mv /var/lib/docker /mnt/volume/docker
+            sudo ln -s /mnt/volume/docker /var/lib/docker
+            systemctl start docker
+            cd /mnt/volume/CloudProject && docker-compose up -d db
           params:
             user: "debian"
             password: "password"
