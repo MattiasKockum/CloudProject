@@ -1,5 +1,3 @@
 parameters:
-  ImageName: debian10-docker
-  SecurityGroupWeb: web-access
-  SecurityGroupDB: database-access
-  KeyPairName: deployment-key
+  image_name: debian12_docker
+  key_name: deployment-key

@@ -1,106 +1,126 @@
-heat_template_version: wallaby
-
-description: >
-  HOT template for deploying LAMP stack on OpenStack
+heat_template_version: '2018-08-31'
 
 parameters:
-  ImageName:
+  image_name:
     type: string
-    description: Name of the image to use for VMs
-  SecurityGroupWeb:
+    default: debian
+  key_name:
     type: string
-    description: Name of the security group for web access
-  SecurityGroupDB:
-    type: string
-    description: Name of the security group for database access
-  KeyPairName:
-    type: string
-    description: Name of the RSA keypair to use for SSH access
+    default: key1
 
 resources:
-  Volume:
+  volume1:
     type: OS::Cinder::Volume
     properties:
+      name: volume1
       size: 2
 
-  Network:
+  network:
     type: OS::Neutron::Net
     properties:
-      name: network_info3_rjean
+      name: project_network
 
-  Subnet:
+  subnet:
     type: OS::Neutron::Subnet
     properties:
-      network: { get_resource: Network }
+      network: { get_resource: network }
       cidr: 192.168.100.0/24
       gateway_ip: 192.168.100.1
       allocation_pools:
         - start: 192.168.100.2
           end: 192.168.100.254
 
-  Router:
-    type: OS::Neutron::Router
-
-  RouterInterface:
-    type: OS::Neutron::RouterInterface
-    properties:
-      router_id: { get_resource: Router }
-      subnet: { get_resource: Subnet }
-
-  Port:
+  frontend_port:
     type: OS::Neutron::Port
     properties:
-      network: { get_resource: Network }
+      network: { get_resource: network }
+      security_groups: [ { get_resource: frontend_security_group } ]
 
-  VM1:
+  backend_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: network }
+      security_groups: [ { get_resource: backend_security_group } ]
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      external_gateway_info:
+        network: External-ENSSAT
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: subnet }
+
+  frontend_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 443
+          port_range_max: 443
+
+  backend_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - direction: ingress
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+
+  frontend_vm:
     type: OS::Nova::Server
     properties:
-      name: VM1
-      image: { get_param: ImageName }
+      image: { get_param: image_name }
       flavor: m1.mini
-      key_name: { get_param: KeyPairName }
+      key_name: { get_param: key_name }
       networks:
-        - port: { get_resource: Port }
+        - port: { get_resource: frontend_port }
+
+  backend_vm:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image_name }
+      flavor: m1.mini
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: backend_port }
       user_data_format: RAW
       user_data:
         str_replace:
           template: |
-            "#cloud-config\npackages:\n  - mysql-server"
+            #!/bin/bash
+            echo "user:password" | chpasswd
           params:
-            "{{ DB_USER }}": "admin"
-            "{{ DB_PASSWORD }}": "password"
-            "{{ FLOATING_IP }}": { get_attr: [FloatingIP, floating_ip_address] }
+            user: "debian"
+            password: "user"
 
-  VM2:
-    type: OS::Nova::Server
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
     properties:
-      name: VM2
-      image: { get_param: ImageName }
-      flavor: m1.mini
-      key_name: { get_param: KeyPairName }
-      networks:
-        - port: { get_resource: Port }
-      user_data_format: RAW
-      user_data:
-        str_replace:
-          template: |
-            "#cloud-config\npackages:\n  - mysql-server"
-          params:
-            "{{ DB_USER }}": "admin"
-            "{{ DB_PASSWORD }}": "password"
-            "{{ FLOATING_IP }}": { get_attr: [FloatingIP, floating_ip_address] }
-  FloatingIP:
+      instance_uuid: { get_resource: backend_vm }
+      volume_id: { get_resource: volume1 }
+      mountpoint: /dev/vdb
+
+  floating_ip:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: External-ENSSAT
-
-  FloatingIPAssociation:
-    type: OS::Neutron::FloatingIPAssociation
-    properties:
-      floatingip_id: { get_resource: FloatingIP }
-      port_id: { get_resource: Port }
+      port_id: { get_resource: frontend_port }
 
 outputs:
-  NetworkID:
-    description: ID of the created network
-    value: { get_resource: Network }
+  floating_ip_address:
+    description: Floating IP Address
+    value: { get_attr: [floating_ip, floating_ip_address] }
