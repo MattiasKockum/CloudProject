@@ -9,11 +9,17 @@ parameters:
     default: key1
 
 resources:
-  volume1:
+  volume_backend:
     type: OS::Cinder::Volume
     properties:
-      name: volume1
+      name: volume_backend
       size: 2
+
+  volume_frontend:
+    type: OS::Cinder::Volume
+    properties:
+      name: volume_frontend
+      size: 8
 
   network:
     type: OS::Neutron::Net
@@ -94,6 +100,16 @@ resources:
           template: |
             #!/bin/bash
             echo "user:password" | chpasswd
+            mkdir /mnt/volume
+            sudo mkfs.ext4 /dev/vdb
+            sudo mount /dev/vdb /mnt/volume
+            chmod o+w /mnt/volume
+            git clone https://github.com/MattiasKockum/CloudProject /mnt/volume/CloudProject
+            systemctl stop docker
+            sudo mv /var/lib/docker /mnt/volume/docker
+            sudo ln -s /mnt/volume/docker /var/lib/docker
+            systemctl start docker
+            cd /mnt/volume/CloudProject/frontend_volume && docker-compose up -d
           params:
             user: "debian"
             password: "password"
@@ -116,11 +132,18 @@ resources:
             user: "debian"
             password: "password"
 
-  volume_attachment:
+  volume_attachment_frontend:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: frontend_vm }
+      volume_id: { get_resource: volume_frontend }
+      mountpoint: /dev/vdb
+
+  volume_attachment_backend:
     type: OS::Cinder::VolumeAttachment
     properties:
       instance_uuid: { get_resource: backend_vm }
-      volume_id: { get_resource: volume1 }
+      volume_id: { get_resource: volume_backend }
       mountpoint: /dev/vdb
 
   floating_ip:
