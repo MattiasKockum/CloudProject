@@ -1,4 +1,4 @@
-heat_template_version: '2016-04-08'
+heat_template_version: '2018-08-31'
 
 parameters:
   image_name:
@@ -174,6 +174,7 @@ resources:
 
   floating_ip:
     type: OS::Neutron::FloatingIP
+    depends_on: router
     properties:
       floating_network: External-ENSSAT
       port_id: { get_resource: frontend_port }
